@@ -1,0 +1,152 @@
+org: photonadmin # Corresponds to the serverless.com account used for monitoring
+app: photonranch
+
+service: datastreamer
+
+plugins:
+  - serverless-python-requirements
+  - serverless-domain-manager
+
+custom:
+  connectionsTable: datastream-connections
+
+  customDomain:
+    websocket:
+      domainName: datastream.photonranch.org
+      basePath: ${self:provider.stage}
+      stage: ${self:provider.stage}
+      createRoute53Record: true
+      endpointType: 'regional'
+      securityPolicy: tls_1_2
+      autoDomain: true
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+  runtime: python3.8
+  region: us-east-1
+  websocketsApiName: datastream-websocket
+  websocketsApiRouteSelectionExpression: $request.body.action
+  environment: 
+    CONNECTIONS_TABLE: 
+      Ref: connectionsTable
+    INCOMING_QUEUE_URL:
+      Ref: incomingQueue
+    OUTGOING_QUEUE_URL:
+      Ref: outgoingQueue
+    WSS_URL:
+      Fn::Join:
+        - ""
+        - - "https://"
+          - Ref: "WebsocketsApi"
+          - ".execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}"
+
+  iamRoleStatements:
+    - Effect: Allow 
+      Action: 
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+        - dynamodb:Scan
+        - dynamodb:Query
+        - dynamodb:DescribeStream
+        - dynamodb:GetRecords
+        - dynamodb:GetShardIterator
+        - dynamodb:ListStreams
+      Resource:
+        - arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.connectionsTable}*
+
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        - Fn::GetAtt: [ incomingQueue, Arn ]
+        - Fn::GetAtt: [ outgoingQueue, Arn ]
+
+resources: 
+  Resources:
+
+    connectionsTable: 
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.connectionsTable}-${self:provider.stage}
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: expiration
+          Enabled: true
+        BillingMode: PAY_PER_REQUEST
+
+    incomingQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: datastreamIncomingQueue-${self:provider.stage}
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - incomingDLQ
+              - Arn
+          maxReceiveCount: 5  # number of attempts before sending to DLQ
+
+    outgoingQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: datastreamOutgoingQueue-${self:provider.stage}
+        RedrivePolicy:
+          deadLetterTargetArn:
+            Fn::GetAtt:
+              - outgoingDLQ
+              - Arn
+          maxReceiveCount: 5
+
+    incomingDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: datastreamIncomingDLQ-${self:provider.stage}
+
+    outgoingDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: datastreamOutgoingDLQ-${self:provider.stage}
+
+
+functions:
+
+  connectionHandler:
+    handler: connections.connection_manager
+    events: 
+      - websocket: 
+          route: $connect
+      - websocket:
+          route: $disconnect
+  
+  updateSubscriberSite:
+    handler: connections.update_subscriber_site
+    events:
+      - websocket:
+          route: updatesubscribersite
+  
+  incomingQueueHandler:
+    handler: connections.incoming_queue_handler
+    events:
+      - sqs:
+          batchSize: 1
+          arn:
+            Fn::GetAtt:
+              - incomingQueue
+              - Arn
+
+  outgoingQueueHandler:
+    handler: connections.outgoing_queue_handler
+    events:
+      - sqs:
+          batchSize: 1
+          arn:
+            Fn::GetAtt:
+              - outgoingQueue
+              - Arn
