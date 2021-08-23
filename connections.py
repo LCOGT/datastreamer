@@ -87,7 +87,7 @@ def add_connection(connection_id, site):
         "PK": connection_id,
         "site": site,
         "timestamp": decimal.Decimal(int(time.time())),
-        "expiration": decimal.Decimal(int(time.time() + 86400)),  # connection expires in 24hrs
+        "expiration": decimal.Decimal(int(time.time() + (7 * 86400))),  # connection expires in 1 week hrs
         "timestamp_readable": datetime.datetime.now().isoformat()
     }
     table_response = subscribers_table.put_item(Item=subscriber)
@@ -133,9 +133,9 @@ def incoming_queue_handler(event, context):
         # Parse the queue message content
         try:
             payload = json.loads(record["body"])
-            site = json.loads(payload["site"])
-            topic = json.loads(payload["topic"])
-            data = json.loads(payload["data"])
+            site = payload["site"]
+            topic = payload["topic"]
+            data = payload["data"]
         except KeyError as e:
             logger.error(f"KeyError when parsing incoming queue contents. {e}")
 
@@ -173,8 +173,8 @@ def outgoing_queue_handler(event, context):
         # Parse the queue to get connections and content to send
         try:
             payload = json.loads(record["body"])
-            connections = json.loads(payload["connections"])
-            message = json.loads(payload["message"])
+            connections = payload["connections"]
+            message = payload["message"]
         except KeyError as e:
             logger.error(f"KeyError when parsing queue contents. {e}")
 
