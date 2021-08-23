@@ -24,7 +24,7 @@ along with the payload, and workers pull from this queue to send to the websocke
 Services may stream data to subscribers by sending it to the sqs queue `datastreamIncomingQueue-<stage>` where stage is either dev or prod.
 The body of the queue payload should be structured as follows: 
 
-```json
+```
 {
     site: (string) the sitecode that specifies which subscribers will recieve this message,
     topic: (string) the type of data (ie. weather, status, calendar), used by the recieving clients,
