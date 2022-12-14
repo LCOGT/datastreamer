@@ -36,3 +36,58 @@ The body of the queue payload should be structured as follows:
 
 Clients may subscribe to datastreams by connecting to the websocket at `datastream.photonranch.org/<stage>?site=<site>`.
 The stage can be dev or prod, and the site abbreviation (ie. mrc) should be included as a query string parameter.
+
+
+## Example: Sending data in python
+
+Prequisites:
+
+- datastreamer is deployed and running in a stage called dev.
+- aws credentials with the permission to write to sqs queues is setup on your local machine
+
+If the conditions above are satisfied, the following should send a message through datasteamer to all clients connected and listtening for messages to site "tst":
+
+```python
+import boto3
+import botocore.exceptions
+import json
+
+# Payload data
+SITE = "tst"
+TOPIC = "testing"
+MESSAGE = json.dumps({ "text": "hello, site tst" })  # any string
+
+# This is the SQS queue we send messages to.
+STAGE = "dev"
+DATASTREAMER_QUEUE_NAME = f"datastreamIncomingQueue-{STAGE}"
+
+# Boto3 requires the queue url, which we can get using its name
+def get_queue_url(queueName: str) -> str:
+    sqs_client = boto3.client("sqs", region_name="us-east-1")
+    response = sqs_client.get_queue_url(
+        QueueName=queueName,
+    )
+    return response["QueueUrl"]
+
+# This method sends a message to the datastreamer SQS queue 
+def send_to_datastream(topic: str, site: str, data: str):
+    sqs = boto3.client('sqs')
+    queue_url = get_queue_url(DATASTREAMER_QUEUE_NAME)
+    payload = {
+        "topic": topic,
+        "site": site,
+        "data": data,
+    }
+    try:
+        response = sqs.send_message(
+            QueueUrl=queue_url,
+            MessageBody=json.dumps(payload),
+        )
+        print('Message sent succesfully')
+    except botocore.exceptions.ClientError as error:
+        print('Message failed to send', error)
+
+# Send the message
+send_to_datastream(TOPIC, SITE, MESSAGE)
+
+```
