@@ -23,7 +23,7 @@ custom:
 provider:
   name: aws
   stage: ${opt:stage, "dev"}
-  runtime: python3.8
+  runtime: python3.9
   region: us-east-1
   websocketsApiName: datastream-websocket
   websocketsApiRouteSelectionExpression: $request.body.action
