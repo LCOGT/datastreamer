@@ -26,7 +26,7 @@ jobs:
       
     - name: Serverless AWS authentication
       run: |
-        sls config credentials \
+        npx serverless config credentials \
           --provider aws \
           --key ${{ secrets.SLS_AWS_ACCESS_KEY_ID }} \
           --secret ${{ secrets.SLS_AWS_SECRET_ACCESS_KEY }}
