@@ -35,7 +35,7 @@ jobs:
       run: |
         npx install -g serverless && \
         npx serverless plugin install --name serverless-python-requirements && \
-        npx serverless plugin install --name serverless-domain-manager serverless-domain-manager
+        npx serverless plugin install --name serverless-domain-manager 
     
     - name: Serverless Deploy
       run: npx serverless deploy --stage dev
