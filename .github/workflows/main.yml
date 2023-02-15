@@ -20,19 +20,23 @@ jobs:
       uses: actions/setup-python@v4
       with:
         python-version: 3.8
-    
-    - name: Set up Environment
+
+    - name: Install NPM Dependencies
       run: npm ci
       
+    - name: Serverless AWS authentication
+      run: |
+        sls config credentials \
+          --provider aws \
+          --key ${{ secrets.SLS_AWS_ACCESS_KEY_ID }} \
+          --secret ${{ secrets.SLS_AWS_SECRET_ACCESS_KEY }}
+
     - name: Install Plugins
       run: |
+        npx install -g serverless && \
         npx serverless plugin install --name serverless-python-requirements && \
         npx serverless plugin install --name serverless-domain-manager serverless-domain-manager
     
     - name: Serverless Deploy
       run: npx serverless deploy --stage dev
-      env:
-        SERVERLESS_ACCESS_KEY: ${{ secrets.SLS_SECRET_KEY }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.SLS_AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.SLS_AWS_SECRET_ACCESS_KEY }}
         
