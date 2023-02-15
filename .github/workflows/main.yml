@@ -38,4 +38,6 @@ jobs:
     
     - name: Serverless Deploy
       run: serverless deploy --stage dev
+      env:
+        SERVERLESS_ACCESS_KEY: ${{ secrets.SLS_SECRET_KEY }}
         
