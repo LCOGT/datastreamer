@@ -3,8 +3,9 @@
     "version": "1.0.0",
     "description": "websockets for photonranch",
     "author": "",
-    "devDependencies": {
-        "serverless-python-requirements": "^6.0.0",
-        "serverless-domain-manager": "6.0.3"
+    "dependencies": {
+        "serverless": "^3.27.0",
+        "serverless-domain-manager": "6.0.3",
+        "serverless-python-requirements": "^6.0.0"
     }
 }
